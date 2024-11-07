@@ -2,19 +2,16 @@ from sqlalchemy.orm import Session
 from .models import Exercicio
 from .schemas import ExercicioCriar
 
-# Função para obter um exercício pelo ID
-def obter_exercicio_por_id(db: Session, exercicio_id: int):
-    return db.query(Exercicio).filter(Exercicio.id == exercicio_id).first()
+
 
 # Função para criar um exercício
 def criar_exercicio(db: Session, exercicio: ExercicioCriar):
-    db_exercicio = Exercicio(**exercicio.dict())
+    db_exercicio = Exercicio(**exercicio.model_dump())
     db.add(db_exercicio)
     db.commit()
     db.refresh(db_exercicio)
     return db_exercicio
 
-# Função para criar exercícios 
 def criar_exercicios_iniciais(db: Session):
     exercicios = [
 
@@ -54,17 +51,23 @@ def criar_exercicios_iniciais(db: Session):
         db_exercicio = Exercicio(**exercicio)
         db.add(db_exercicio)
     db.commit()
-    return {"mensagem": "Exercícios criados com sucesso"}
+    return {"mensagem": "Exercicios criados"}
 
-# Função get pelo ID
+
+#exercício pelo ID
+def obter_exercicio_por_id(db: Session, exercicio_id: int):
+    return db.query(Exercicio).filter(Exercicio.id == exercicio_id).first()
+
+
+#get pelo ID
 def obter_exercicio(db: Session, exercicio_id: int):
     return obter_exercicio_por_id(db, exercicio_id)
 
-# Função get
+#get
 def obter_exercicios(db: Session, skip: int = 0, limit: int = 10):
     return db.query(Exercicio).offset(skip).limit(limit).all()
 
-# Função put
+#put
 def atualizar_exercicio(db: Session, exercicio_id: int, dados_exercicio: ExercicioCriar):
     db_exercicio = obter_exercicio_por_id(db, exercicio_id)
     if db_exercicio:
@@ -76,13 +79,12 @@ def atualizar_exercicio(db: Session, exercicio_id: int, dados_exercicio: Exercic
         return db_exercicio
     return None
 
-# Função delete
-
+# delete
 
 def deletar_exercicio(db: Session, exercicio_id: int):
     db_exercicio = obter_exercicio_por_id(db, exercicio_id)
     if db_exercicio:
         db.delete(db_exercicio)
         db.commit()
-        return {"mensagem": "Exercício deletado com sucesso"}
-    return {"mensagem": "Exercício não encontrado"}
+        return {"mensagem": "Exercicio deletado"}
+    return {"mensagem": "Exercicio não encontrado"}
