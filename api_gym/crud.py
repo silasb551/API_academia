@@ -87,4 +87,4 @@ def deletar_exercicio(db: Session, exercicio_id: int):
         db.delete(db_exercicio)
         db.commit()
         return {"mensagem": "Exercicio deletado"}
-    return {"mensagem": "Exercicio não encontrado"}
+    return {"mensagem": "Exercicio não encontrado"}
