@@ -5,13 +5,14 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 app = FastAPI()
 
+
 usuarios_temporarios = {
     "usuario1": "senha1",
     "usuario2": "senha2",
-    "usuario3": "senha3"
 }
 
-SECRET_KEY = "key123"  
+
+SECRET_KEY = "senha123"  
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -31,7 +32,9 @@ def verificar_credenciais(username: str, password: str):
         return {"username": username}
     return None
 
-# Função para verificar o token JWT
+
+
+# Função para verificar o token JWT e extrair o username
 def verificar_token(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=401,
@@ -46,19 +49,3 @@ def verificar_token(token: str = Depends(oauth2_scheme)):
         return username
     except JWTError:
         raise credentials_exception
-
-@app.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = verificar_credenciais(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=400, detail="Nome de usuário ou senha incorretos"
-        )
-    token_data = {"sub": user["username"]}
-    token = criar_token(token_data)
-    return {"access_token": token, "token_type": "bearer"}
-
-
-
-
-
