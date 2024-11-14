@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from api_gym.auth import criar_token, verificar_credenciais, verificar_token
+from contextlib import asynccontextmanager
+from api_gym.auth import criar_token, verificar_credenciais
 from api_gym.database import SessionLocal, engine
 from api_gym.models import Base, User
-from contextlib import asynccontextmanager 
 from api_gym.schemas import ExercicioCriar, ExercicioResposta
 from api_gym.exercicios import (
     criar_exercicios_iniciais,
@@ -15,10 +15,10 @@ from api_gym.exercicios import (
     deletar_exercicio
 )
 
+app = FastAPI()
+
 # Banco de dados
 Base.metadata.create_all(bind=engine)
-
-app = FastAPI()
 
 # Sessão do banco de dados
 def obter_db():
@@ -31,6 +31,7 @@ def obter_db():
 # Inicialização do banco de dados com exercícios iniciais
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
     db = SessionLocal()
     exercicios = [
           {
@@ -68,9 +69,9 @@ async def lifespan(app: FastAPI):
     db.close()
 
     yield  
+    
 
-app = FastAPI(lifespan=lifespan)
-
+# Endpoint para gerar token com as credenciais fornecidas
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = verificar_credenciais(form_data.username, form_data.password)
@@ -82,32 +83,34 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     token = criar_token(token_data)
     return {"access_token": token, "token_type": "bearer"}
 
+
+# Endpoints de CRUD de exercícios, protegidos pelo token
 @app.post("/exercicios/", response_model=ExercicioResposta)
-def criar_exercicio_endpoint(exercicio: ExercicioCriar, db: Session = Depends(obter_db), token: str = Depends(verificar_token)):
+async def criar_exercicio_endpoint(exercicio: ExercicioCriar, db: Session = Depends(obter_db), token: str = Depends(verificar_credenciais)):
     return criar_exercicio(db, exercicio)
 
 @app.get("/exercicios/{exercicio_id}", response_model=ExercicioResposta)
-def obter_exercicio_endpoint(exercicio_id: int, db: Session = Depends(obter_db), token: str = Depends(verificar_token)):
+async def obter_exercicio_endpoint(exercicio_id: int, db: Session = Depends(obter_db), token: str = Depends(verificar_credenciais)):
     db_exercicio = obter_exercicio(db, exercicio_id)
     if db_exercicio is None:
         raise HTTPException(status_code=404, detail="Exercício não encontrado")
     return db_exercicio
 
 @app.get("/exercicios/", response_model=list[ExercicioResposta])
-def obter_exercicios_endpoint(skip: int = 0, limit: int = 10, db: Session = Depends(obter_db), token: str = Depends(verificar_token)):
-    exercicios = obter_exercicios(db, skip=skip, limit=limit)
-    return exercicios
+async def obter_exercicios_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(obter_db), token: str = Depends(verificar_credenciais)):
+    db_exercicio = obter_exercicios(db, skip=skip, limit=limit)
+    return db_exercicio
 
-@app.put("/exercicios/{exercicio_id}", response_model=ExercicioResposta)
-def atualizar_exercicio_endpoint(exercicio_id: int, exercicio: ExercicioCriar, db: Session = Depends(obter_db), token: str = Depends(verificar_token)):
+@app.put("/exercicios/", response_model=ExercicioResposta)
+async def atualizar_exercicio_endpoint(exercicio_id: int, exercicio: ExercicioCriar, db: Session = Depends(obter_db), token: str = Depends(verificar_credenciais)):
     db_exercicio = atualizar_exercicio(db, exercicio_id, exercicio)
     if db_exercicio is None:
         raise HTTPException(status_code=404, detail="Exercício não encontrado")
     return db_exercicio
 
 @app.delete("/exercicios/{exercicio_id}", response_model=ExercicioResposta)
-def deletar_exercicio_endpoint(exercicio_id: int, db: Session = Depends(obter_db), token: str = Depends(verificar_token)):
+async def deletar_exercicio_endpoint(exercicio_id: int, db: Session = Depends(obter_db), token: str = Depends(verificar_credenciais)):
     db_exercicio = deletar_exercicio(db, exercicio_id)
     if db_exercicio is None:
-        raise HTTPException(status_code=404, detail="Exercicio não encontrado")
-    return db_exercicio
+        raise HTTPException(status_code=404, detail="Exercício não encontrado")
+    return db_exercicio
